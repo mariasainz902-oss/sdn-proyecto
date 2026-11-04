@@ -1,0 +1,10 @@
+target/
+.idea/
+bin/
+*.iml
+.settings/
+.project
+.classpath
+__pycache__/
+*.tmp
+__pycache__/

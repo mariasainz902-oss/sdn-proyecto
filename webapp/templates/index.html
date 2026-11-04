@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VPN Manager</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header>
+    <h1>VPN Manager</h1>
+    <p>Each host accepts or rejects its tunnels. A tunnel only works both ways when both ends accept it.</p>
+  </header>
+
+  <section id="status" class="status"></section>
+
+  <main id="hosts" class="hosts"></main>
+
+  <footer>
+    <button id="reset" class="reset">Reset (reject all)</button>
+    <span id="msg"></span>
+  </footer>
+
+  <script>
+    const TUNNEL_NAMES = { tunnel1: "Tunnel 1", tunnel2: "Tunnel 2" };
+    const STATUS_TEXT = { up: "UP", half: "ONE WAY", down: "DOWN" };
+
+    async function api(method, url, body) {
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      if (!res.ok) throw new Error((await res.json()).error || res.status);
+      return res.json();
+    }
+
+    function render(data) {
+      // Tunnel status bar
+      const status = document.getElementById("status");
+      status.innerHTML = "";
+      for (const [t, info] of Object.entries(data.tunnels)) {
+        const [a, b] = info.ends;
+        const div = document.createElement("div");
+        div.className = "tunnel " + info.status;
+        div.innerHTML = `
+          <strong>${TUNNEL_NAMES[t]}</strong>
+          <span class="badge">${STATUS_TEXT[info.status]}</span>
+          <small>${a} → ${b}: ${info.forward ? "✔" : "✘"} &nbsp; ${b} → ${a}: ${info.backward ? "✔" : "✘"}</small>`;
+        status.appendChild(div);
+      }
+
+      // One card per host
+      const hosts = document.getElementById("hosts");
+      hosts.innerHTML = "";
+      for (const host of Object.keys(data.hosts).sort()) {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `<h2>${host}</h2>`;
+        for (const t of Object.keys(data.hosts[host]).sort()) {
+          const action = data.hosts[host][t];
+          const row = document.createElement("div");
+          row.className = "row";
+          row.innerHTML = `
+            <span>${TUNNEL_NAMES[t]}</span>
+            <div class="toggle">
+              <button class="accept ${action === "accept" ? "on" : ""}">Accept</button>
+              <button class="reject ${action === "reject" ? "on" : ""}">Reject</button>
+            </div>`;
+          const [acc, rej] = row.querySelectorAll("button");
+          acc.onclick = () => setTunnel(host, t, "accept");
+          rej.onclick = () => setTunnel(host, t, "reject");
+          card.appendChild(row);
+        }
+        hosts.appendChild(card);
+      }
+    }
+
+    function showMsg(text) {
+      const msg = document.getElementById("msg");
+      msg.textContent = text;
+      clearTimeout(showMsg.t);
+      showMsg.t = setTimeout(() => (msg.textContent = ""), 3000);
+    }
+
+    async function setTunnel(host, tunnel, action) {
+      try {
+        render(await api("POST", "/api/tunnels", { host, tunnel, action }));
+        showMsg(`${host} ${TUNNEL_NAMES[tunnel]} → ${action}`);
+      } catch (e) {
+        showMsg("Error: " + e.message);
+      }
+    }
+
+    document.getElementById("reset").onclick = async () => {
+      render(await api("POST", "/api/reset"));
+      showMsg("All tunnels rejected");
+    };
+
+    api("GET", "/api/tunnels").then(render);
+  </script>
+</body>
+</html>

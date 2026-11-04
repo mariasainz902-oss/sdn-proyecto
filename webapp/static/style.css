@@ -1,0 +1,106 @@
+:root {
+  --bg: #f4f6f8;
+  --card: #ffffff;
+  --text: #1d2430;
+  --muted: #5f6b7a;
+  --border: #d9dee5;
+  --green: #1f9d55;
+  --red: #d64545;
+  --amber: #d08a00;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 24px 16px;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+header, .status, .hosts, footer {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+header h1 { margin: 0 0 4px; }
+header p { margin: 0 0 20px; color: var(--muted); }
+
+.status {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.tunnel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-left: 6px solid var(--red);
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px;
+}
+.tunnel small { grid-column: 1 / -1; color: var(--muted); }
+.tunnel.up   { border-left-color: var(--green); }
+.tunnel.half { border-left-color: var(--amber); }
+
+.badge {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--red);
+}
+.up .badge   { background: var(--green); }
+.half .badge { background: var(--amber); }
+
+.hosts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+}
+.card h2 { margin: 0 0 12px; font-size: 20px; }
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+}
+
+.toggle { display: flex; gap: 6px; }
+
+button {
+  font: inherit;
+  font-size: 14px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--muted);
+  cursor: pointer;
+}
+button.accept.on { background: var(--green); border-color: var(--green); color: #fff; }
+button.reject.on { background: var(--red);   border-color: var(--red);   color: #fff; }
+
+footer {
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.reset { color: var(--text); }
+#msg { color: var(--muted); font-size: 14px; }
