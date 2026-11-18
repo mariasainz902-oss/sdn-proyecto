@@ -59,6 +59,12 @@ def run():
         ip='10.0.0.2/24',
         mac='00:00:00:00:00:02'
     )
+    
+    h3 = net.addHost(
+        'h3',
+        ip='10.0.0.3/24',
+        mac='00:00:00:00:00:03'
+    )
 
     # -------------------------------------------------
     # Explicit port assignments
@@ -67,17 +73,12 @@ def run():
     # h1 -- s1
     # s1 port 1
     net.addLink(
-        h1, s1,
-        port2=1
-    )
+        h1, s1 # port 1 h1 - port 1 s1
+        )
 
-    # s1 -- s2
-    # s1 port 2
-    # s2 port 1
+    # s1 -- s4
     net.addLink(
-        s1, s2,
-        port1=2,
-        port2=1
+        s1, s4 # s1 port 2  - s4 port 1
     )
 
     # s1 -- s3
@@ -98,19 +99,26 @@ def run():
         port2=2
     )
 
-    # s3 -- s4
+    # s3 -- s2
     # s3 port 2
     # s4 port 3
     net.addLink(
-        s3, s4,
+        s3, s2,
         port1=2,
         port2=3
     )
 
-    # h2 -- s4
-    # s4 port 1
+    # h2 -- s2
+    # s2 port 1
     net.addLink(
-        h2, s4,
+        h2, s2,
+        port2=1
+    )
+    
+    # h3 -- s3
+    # s2 port 1
+    net.addLink(
+        h2, s2,
         port2=1
     )
 
