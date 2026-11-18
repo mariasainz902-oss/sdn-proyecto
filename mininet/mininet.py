@@ -34,7 +34,11 @@ class MyTopo(Topo):
         self.addLink(switches[0], hosts[0], bw=100, max_queue_size=1000) # s1 - h1
         self.addLink(switches[1], hosts[1], bw=100, max_queue_size=1000)
         self.addLink(switches[2], hosts[2], bw=100, max_queue_size=1000) 
-
+        
+        self.addLink(switches[0], switches[2],bw=100, max_queue_size=1000)
+        self.addLink(switches[0], switches[3],bw=100, max_queue_size=1000)
+        self.addLink(switches[1], switches[2],bw=100, max_queue_size=1000)
+        self.addLink(switches[1], switches[3],bw=100, max_queue_size=1000)
         
 
 topos = { 'mytopo': ( lambda: MyTopo() ) }  # this makes it possible to run the mininet with the parameter "--topo mytopo"
@@ -67,7 +71,6 @@ def perfTest():
     hosts[0].setMAC("00:00:00:00:00:01", intf='h1-eth0')
     hosts[1].setMAC("00:00:00:00:00:02", intf='h2-eth0')
     hosts[2].setMAC("00:00:00:00:00:03", intf='h3-eth0')
-    hosts[3].setMAC("00:00:00:00:00:04", intf='h4-eth0')
 
     switches = net.switches
     switches[0].setMAC("00:00:00:01:00:01", intf='s1-eth1')
@@ -77,6 +80,14 @@ def perfTest():
     switches[1].setMAC("00:00:00:02:00:01", intf='s2-eth1')
     switches[1].setMAC("00:00:00:02:00:02", intf='s2-eth2')
     switches[1].setMAC("00:00:00:02:00:03", intf='s2-eth3')
+    
+    switches[2].setMAC("00:00:00:03:00:01", intf='s3-eth1')
+    switches[2].setMAC("00:00:00:03:00:02", intf='s3-eth2')
+    switches[2].setMAC("00:00:00:03:00:03", intf='s3-eth3')
+    
+    switches[3].setMAC("00:00:00:04:00:01", intf='s4-eth1')
+    switches[3].setMAC("00:00:00:04:00:02", intf='s4-eth2')
+    switches[3].setMAC("00:00:00:04:00:03", intf='s4-eth3')
 
     net.start()
     print("Dumping host connections")
