@@ -87,9 +87,10 @@ def perfTest():
     
     switches[3].setMAC("00:00:00:04:00:01", intf='s4-eth1')
     switches[3].setMAC("00:00:00:04:00:02", intf='s4-eth2')
-    switches[3].setMAC("00:00:00:04:00:03", intf='s4-eth3')
+    #switches[3].setMAC("00:00:00:04:00:03", intf='s4-eth3')
 
     net.start()
+    net.staticArp()
     print("Dumping host connections")
     dumpNodeConnections(net.hosts)
     dumpNetConnections(net)

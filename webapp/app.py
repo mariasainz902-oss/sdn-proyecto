@@ -1,9 +1,10 @@
 """
 VPN Manager - web backend (Flask).
 
-Shows the page where each host accepts/rejects its tunnels and writes the
-result to STATE_FILE. The ONOS app (VpnManager.java) reads that same file
-every 2 seconds and installs/removes the OpenFlow rules.
+Shows the page where each host accepts/rejects its tunnels.
+On every click it:
+    1. saves the new state in STATE_FILE (tunnels.txt), and
+    2. calls the ONOS REST API (onos_rest.py) to install / remove the rules.
 
 File format (one line per entry):
     H1 tunnel1 accept
@@ -21,10 +22,10 @@ import threading
 
 from flask import Flask, jsonify, render_template, request
 
+import onos_rest
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 INIT_FILE = os.path.join(BASE_DIR, "tunnels_init.txt")
-
-# Must be the same path as STATE_FILE in VpnManager.java
 STATE_FILE = os.environ.get("TUNNELS_FILE", "/tmp/tunnels.txt")
 
 # Which host is at each end of each tunnel
@@ -51,15 +52,14 @@ def read_state():
 
 
 def write_state(state):
-    """Writes to a temp file and renames it, so ONOS never reads a half-written file."""
     tmp = STATE_FILE + ".tmp"
     with open(tmp, "w") as f:
         for host, tunnel in sorted(state):
-            f.write(f"{host} {tunnel} {state[(host, tunnel)]}\n")
+            f.write("{} {} {}\n".format(host, tunnel, state[(host, tunnel)]))
     os.replace(tmp, STATE_FILE)
 
 
-def state_as_json(state):
+def state_as_json(state, onos_error=None):
     hosts = {}
     for (host, tunnel), action in state.items():
         hosts.setdefault(host, {})[tunnel] = action
@@ -68,19 +68,10 @@ def state_as_json(state):
     for tunnel, (a, b) in TUNNELS.items():
         a_ok = state[(a, tunnel)] == "accept"
         b_ok = state[(b, tunnel)] == "accept"
-        if a_ok and b_ok:
-            status = "up"
-        elif a_ok or b_ok:
-            status = "half"
-        else:
-            status = "down"
-        tunnels[tunnel] = {
-            "ends": [a, b],
-            "status": status,
-            "forward": a_ok,   # a -> b has rules
-            "backward": b_ok,  # b -> a has rules
-        }
-    return {"hosts": hosts, "tunnels": tunnels}
+        status = "up" if a_ok and b_ok else "half" if a_ok or b_ok else "down"
+        tunnels[tunnel] = {"ends": [a, b], "status": status,
+                           "forward": a_ok, "backward": b_ok}
+    return {"hosts": hosts, "tunnels": tunnels, "onos_error": onos_error}
 
 
 @app.route("/")
@@ -97,9 +88,7 @@ def get_tunnels():
 @app.route("/api/tunnels", methods=["POST"])
 def set_tunnel():
     data = request.get_json(silent=True) or {}
-    host = data.get("host")
-    tunnel = data.get("tunnel")
-    action = data.get("action")
+    host, tunnel, action = data.get("host"), data.get("tunnel"), data.get("action")
 
     if (host, tunnel) not in VALID_ENTRIES or action not in ("accept", "reject"):
         return jsonify({"error": "invalid host/tunnel/action"}), 400
@@ -108,19 +97,35 @@ def set_tunnel():
         state = read_state()
         state[(host, tunnel)] = action
         write_state(state)
-        print(f"[web] {host} {tunnel} -> {action}")
-        return jsonify(state_as_json(state))
+        print("[web] {} {} -> {}".format(host, tunnel, action))
+        error = None
+        try:
+            onos_rest.apply((host, tunnel), action)
+        except onos_rest.OnosError as e:
+            error = str(e)
+            print("[web] ONOS ERROR:", error)
+        return jsonify(state_as_json(state, error))
 
 
 @app.route("/api/reset", methods=["POST"])
 def reset():
     with lock:
         shutil.copy(INIT_FILE, STATE_FILE)
-        return jsonify(state_as_json(read_state()))
+        state = read_state()
+        error = None
+        try:
+            onos_rest.sync(state)
+        except onos_rest.OnosError as e:
+            error = str(e)
+        return jsonify(state_as_json(state, error))
 
 
 if __name__ == "__main__":
-    # Every run starts with all tunnels closed
+    # Every run starts with all tunnels closed (also in ONOS)
     shutil.copy(INIT_FILE, STATE_FILE)
-    print(f"[web] State file: {STATE_FILE} (all tunnels rejected)")
+    try:
+        onos_rest.sync(read_state())
+    except onos_rest.OnosError as e:
+        print("[web] WARNING, ONOS not reachable yet:", e)
+    print("[web] State file: {} (all tunnels rejected)".format(STATE_FILE))
     app.run(host="0.0.0.0", port=5000)

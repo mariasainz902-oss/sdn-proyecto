@@ -80,21 +80,25 @@
       const msg = document.getElementById("msg");
       msg.textContent = text;
       clearTimeout(showMsg.t);
-      showMsg.t = setTimeout(() => (msg.textContent = ""), 3000);
+      showMsg.t = setTimeout(() => (msg.textContent = ""), 6000);
     }
 
     async function setTunnel(host, tunnel, action) {
       try {
-        render(await api("POST", "/api/tunnels", { host, tunnel, action }));
-        showMsg(`${host} ${TUNNEL_NAMES[tunnel]} → ${action}`);
+        const data = await api("POST", "/api/tunnels", { host, tunnel, action });
+        render(data);
+        showMsg(data.onos_error
+          ? "ONOS error: " + data.onos_error
+          : `${host} ${TUNNEL_NAMES[tunnel]} → ${action}`);
       } catch (e) {
         showMsg("Error: " + e.message);
       }
     }
 
     document.getElementById("reset").onclick = async () => {
-      render(await api("POST", "/api/reset"));
-      showMsg("All tunnels rejected");
+      const data = await api("POST", "/api/reset");
+      render(data);
+      showMsg(data.onos_error ? "ONOS error: " + data.onos_error : "All tunnels rejected");
     };
 
     api("GET", "/api/tunnels").then(render);
